@@ -1,0 +1,49 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Installer les dépendances
+        run: npm install
+
+      - name: Créer le projet Android
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Mettre l'icône LG
+        run: |
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          for d in android/app/src/main/res/mipmap-*; do
+            cp icon.png "$d/ic_launcher.png"
+            cp icon.png "$d/ic_launcher_round.png"
+            cp icon.png "$d/ic_launcher_foreground.png"
+          done
+
+      - name: Compiler l'APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: roulette-lg-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
